@@ -11,12 +11,13 @@
 
 	define(function (require) {
 
-		var parser, http, https, when, UrlBuilder, normalizeHeaderName, httpsExp;
+		var parser, stream, http, https, when, UrlBuilder, normalizeHeaderName, httpsExp;
 
 		parser = envRequire('url');
 		http = envRequire('http');
 		https = envRequire('https');
 		when = require('when');
+		stream = require('stream');
 		UrlBuilder = require('../UrlBuilder');
 		normalizeHeaderName = require('../util/normalizeHeaderName');
 
@@ -126,9 +127,20 @@
 			});
 
 			if (entity) {
-				clientRequest.write(entity);
+				if (entity instanceof stream.Readable) {
+					entity.on('data', function(chunk) {
+						clientRequest.write(chunk);
+					});
+					entity.on('end', function() {
+						clientRequest.end();
+					});
+				} else {
+					clientRequest.write(entity);
+					clientRequest.end();
+				}
+			} else {
+				clientRequest.end();
 			}
-			clientRequest.end();
 
 			return d.promise;
 		}
